@@ -2,20 +2,25 @@ package com.aashishtripathee.anda;
 
 import com.aashishtripathee.anda.util.SystemUiHider;
 
-import android.annotation.TargetApi;
 import android.app.Activity;
-import android.os.Build;
+import android.graphics.PointF;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.MotionEvent;
 import android.view.View;
 
-import com.aashishtripathee.anda.Egg;
-import com.aashishtripathee.anda.Brick;
-import com.aashishtripathee.anda.GameBoard;
+import android.content.Context;
 
-import java.util.ArrayList;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.os.Vibrator;
+import android.widget.TextView;
 
+
+import android.view.View.OnClickListener;
+import android.widget.Button;
 
 /**
  * An example full-screen activity that shows and hides the system UI (i.e.
@@ -34,7 +39,7 @@ public class GamePlay extends Activity {
      * If {@link #AUTO_HIDE} is set, the number of milliseconds to wait after
      * user interaction before hiding the system UI.
      */
-    private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
+    private static final int AUTO_HIDE_DELAY_MILLIS = 500; // 3000
 
     /**
      * If set, will toggle the system UI visibility upon interaction. Otherwise,
@@ -54,13 +59,18 @@ public class GamePlay extends Activity {
 
     private Handler frame = new Handler();
 
-    private static final int FRAME_RATE = 1; // 50 frames per second
+    private static final long FRAME_RATE = 1; // 50 frames per second
+
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game_play);
         Handler h = new Handler();
+
+        initializeViews();
 
         //We can't initialize the graphics immediately because the layout manager
         //needs to run first, thus we call back in a sec.
@@ -70,7 +80,17 @@ public class GamePlay extends Activity {
                 initGfx();
             }
         }, 1000);
+
+
     }
+
+    public void initializeViews() {
+
+
+
+    }
+
+
 
     synchronized public void initGfx() {
         //It's a good idea to remove any existing callbacks to keep
@@ -110,10 +130,7 @@ public class GamePlay extends Activity {
     Runnable mHideRunnable = new Runnable() {
         @Override
         public void run() {
-            Egg egg = ((GameBoard)findViewById(R.id.the_canvas)).getEgg();
-            egg.move();
-
-            ((GameBoard)findViewById(R.id.the_canvas)).invalidate();
+            ((GameBoard) findViewById(R.id.the_canvas)).invalidate();
             frame.postDelayed(frameUpdate, FRAME_RATE);
         }
     };
@@ -128,15 +145,47 @@ public class GamePlay extends Activity {
     }
 
 
-
-
     private Runnable frameUpdate = new Runnable() {
         @Override
         synchronized public void run() {
-            Egg e = ((GameBoard)findViewById(R.id.the_canvas)).getEgg();
-            e.move();
-            ((GameBoard)findViewById(R.id.the_canvas)).invalidate();
+            ((GameBoard) findViewById(R.id.the_canvas)).invalidate();
             frame.postDelayed(frameUpdate, FRAME_RATE);
+
+
+            Button button = (Button) findViewById(R.id.play_again);
+
+            button.setOnClickListener(new OnClickListener() {
+                public void onClick(View v) {
+                    ((GameBoard) findViewById(R.id.the_canvas)).setGameStatus("gamePlay");
+                    findViewById(R.id.play_again).setVisibility(View.GONE);
+                    findViewById(R.id.play_again).setEnabled(false);
+
+                }
+            });
+
+
+            if (((GameBoard) findViewById(R.id.the_canvas)).getGameStatus() == "gameOver") {
+                button.setVisibility(View.VISIBLE);
+                button.setEnabled(true);
+            }
+
         }
     };
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+
+        ((GameBoard) findViewById(R.id.the_canvas)).moveEggFromBasket();
+
+        ((GameBoard) findViewById(R.id.the_canvas)).invalidate();
+        frame.postDelayed(frameUpdate, FRAME_RATE);
+
+
+        return true;
+
+    }
+
+
+
+
 }
