@@ -9,6 +9,8 @@ import android.os.Handler;
 import android.view.MotionEvent;
 import android.view.View;
 
+import android.content.SharedPreferences;
+
 import android.content.Context;
 
 import android.hardware.Sensor;
@@ -82,11 +84,15 @@ public class GamePlay extends Activity {
         }, 1000);
 
 
+        // Get highest score.
+        SharedPreferences prefs = getSharedPreferences("andaPreferences", Context.MODE_PRIVATE);
+        int lastHighestScore = prefs.getInt("highestScore", 0); //0 is the default value
+        ((GameBoard) findViewById(R.id.the_canvas)).setHighestScore(lastHighestScore);
+
+
     }
 
     public void initializeViews() {
-
-
 
     }
 
@@ -167,6 +173,25 @@ public class GamePlay extends Activity {
             if (((GameBoard) findViewById(R.id.the_canvas)).getGameStatus() == "gameOver") {
                 button.setVisibility(View.VISIBLE);
                 button.setEnabled(true);
+            }
+
+            // Get highest score.
+
+            SharedPreferences prefs = getSharedPreferences("andaPreferences", Context.MODE_PRIVATE);
+
+            int lastHighestScore = prefs.getInt("highestScore", 0); //0 is the default value
+            int currentScore = ((GameBoard) findViewById(R.id.the_canvas)).getScore();
+
+
+            if (currentScore > lastHighestScore) {
+                // Store highest score.
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putInt("highestScore", currentScore);
+                editor.commit();
+
+                System.out.println("Writing highest score!");
+
+                ((GameBoard) findViewById(R.id.the_canvas)).setHighestScore(currentScore);
             }
 
         }

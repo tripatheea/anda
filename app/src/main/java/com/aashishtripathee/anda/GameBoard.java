@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 import android.content.Context;
+
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -32,16 +33,19 @@ public class GameBoard extends View {
     private ArrayList<Basket> baskets = new ArrayList<Basket>();
     private int screenNumber;
 
-    private int indexOfBasketHoldingEgg = 0;
+    private int indexOfBasketHoldingEgg;
 
     private int screenWidth;
     private int screenHeight;
 
+    private int highestScore;
+
     private int score;
 
+    private Boolean holdOnAddingBaskets = false;
 
     private int whereIsEgg; // -1 if on air otherwiese indexOfBasketHoldingEgg.
-    private Boolean moveToNextLevel;
+
 
     private String gameStatus = "gamePlay"; // "home", "gamePlay", or "gameOver"
 
@@ -60,8 +64,9 @@ public class GameBoard extends View {
         this.screenNumber = 1;
 
         this.score = 0;
+        this.highestScore = 0;
+        this.indexOfBasketHoldingEgg = 0;
 
-        this.moveToNextLevel = false;
 
         // Draw stuff.
 
@@ -71,8 +76,13 @@ public class GameBoard extends View {
         //this.drawScore();
     }
 
+    public int getScore() {
+        return this.score;
+    }
 
-
+    protected void setHighestScore(int highestScore) {
+        this.highestScore = highestScore;
+    }
 
     public static float getGravity() {
         return gravity;
@@ -116,6 +126,7 @@ public class GameBoard extends View {
 
 
     private void drawGamePlay(Canvas canvas) {
+
         canvas.drawBitmap(this.egg.getBitmap(this.context), this.egg.getPosition().x, this.egg.getPosition().y, null);
 
         for(int i = 0; i < this.baskets.size(); i++) {
@@ -144,12 +155,16 @@ public class GameBoard extends View {
         this.gameOver();
 
         // Draw score.
-
-
-        p.setColor(Color.rgb(0, 0, 0));
+        p.setColor(Color.rgb(50, 50, 50));
         p.setTextSize((float) (this.screenWidth * 0.1));
         PointF scorePosition = this.percentToAbsolute(45, 7);
         canvas.drawText(Integer.toString(this.score), scorePosition.x, scorePosition.y, p);
+
+        // Draw the highest score.
+        p.setColor(Color.rgb(50, 50, 50));
+        p.setTextSize((float) (this.screenWidth * 0.1));
+        PointF highestScorePosition = this.percentToAbsolute(5, 7);
+        canvas.drawText(Integer.toString(this.highestScore), highestScorePosition.x, highestScorePosition.y, p);
 
         if (this.whereIsEgg != -1 && this.egg.getPosition().y < this.screenHeight) {
 //            float basketX = this.baskets.get(this.whereIsEgg).getPosition().x + Basket.getWidth() / 2 - Egg.getWidth() / 2;
@@ -159,55 +174,65 @@ public class GameBoard extends View {
 
             this.egg.setPosition(new PointF(basketX, basketY));
         }
+    }
 
+    public Boolean eggInABasket() {
+        PointF eggPosition = this.egg.getPosition();
+        float eggX = eggPosition.x;
+        float eggY = eggPosition.y;
 
-        this.score = this.whereIsEgg;
+        for (int i = 0; i < this.baskets.size(); i++) {
+            Basket b = this.baskets.get(i);
+            float basketX = b.getPosition().x;
+            float basketY = b.getPosition().y;
+
+            if (b.active() && (this.egg.getVelocity().y > 0) && (eggY < this.screenHeight)) {                                           // The basket must be active and the egg must be falling down.
+                if ((eggX + Egg.getWidth() / 2 >= basketX + 0.25 * Basket.getWidth()) && ((eggX + Egg.getWidth() / 2) <= (basketX + 0.75 * Basket.getWidth()))) {    // Right x position.
+                    if ( (eggY + Egg.getHeight() * 0.75 >= basketY) && (eggY + Egg.getHeight() <= basketY + Basket.getHeight())){                                // Right y position.
+
+                        this.indexOfBasketHoldingEgg = i;
+
+                        this.egg.setVelocity(new PointF(this.baskets.get(indexOfBasketHoldingEgg).getVelocity().x, this.baskets.get(indexOfBasketHoldingEgg).getVelocity().y));
+
+                        if (this.whereIsEgg != indexOfBasketHoldingEgg) {
+                            // Score for the current basket hasn't been updated yet.
+                            this.score++;
+                            this.whereIsEgg = indexOfBasketHoldingEgg;
+                        }
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private void addEggInitial() {
-        PointF firstBasketPosition = absoluteToPercent(this.baskets.get(1).getPosition().x, this.baskets.get(1).getPosition().y);
+        PointF firstBasketPosition = absoluteToPercent(this.baskets.get(0).getPosition().x, this.baskets.get(0).getPosition().y);
         PointF position = percentToAbsolute(firstBasketPosition.x, firstBasketPosition.y);
         float x = position.x  + Basket.getWidth() / 4;       // Basket is intentional here since we want the egg to be right in the middle of the basket.
-        float y = position.y - Egg.getWidth() / 2;
-        this.egg = new Egg(new PointF(x, y), this.baskets.get(0).getVelocity(), this.screenHeight);
-    }
 
-    private void newScreenUpdateBaskets() {
-//        PointF position = percentToAbsolute(50F, 0 - absoluteToPercent(0, this.baskets.get(0).getHeight()).y);
-//        PointF velocity = new PointF(new Random().nextInt(15 - 10) + 10, Basket.verticalVelocity);        // Decide this based on numberOfScreens (gameLevel)
+//        float x = position.x + (float) 0.0 * Basket.getWidth() + Egg.getWidth() / 2;
 
-        PointF position = percentToAbsolute(50F, 0 - absoluteToPercent(0, this.baskets.get(0).getHeight()).y);
-        PointF velocity = new PointF(0F, 0F);
+        float y = position.y - Egg.getWidth() * 2;
+//        float y = 0;
 
-
-        this.baskets.add(new Basket(position, velocity, this.screenWidth, this.screenHeight));
-
-        this.baskets.remove(0);
-
-        if (this.whereIsEgg > 0) {
-            this.whereIsEgg--;
-            this.indexOfBasketHoldingEgg--;
-        }
-
-
-
-        // Because we're removing the 0th basket, we also need to update the egg's position in respect to the basket's index.
-//
+        this.egg = new Egg(new PointF(x, y), new PointF(0, 0), this.screenWidth, this.screenHeight);
     }
 
     private void addBaskets() {
 
-        int maxX = 90 - Math.round(this.absoluteToPercent(Basket.getWidth(), 0).x); // We use these as percent values.
-        int minX = 10;                                                                // We use these as percent values.
+        int maxX = 70 - Math.round(this.absoluteToPercent(Basket.getWidth(), 0).x); // We use these as percent values.
+        int minX = 30;                                                                // We use these as percent values.
 
         float randomX = new Random().nextInt(maxX - minX + 1) + minX;
 
-//        PointF firstPosition = percentToAbsolute(randomX, 80F);
-//        PointF secondPosition = percentToAbsolute(randomX, 50F);
-//        PointF thirdPosition = percentToAbsolute(new Random().nextInt(maxX - minX + 1) + minX, 20F);
-        PointF firstPosition = percentToAbsolute(50F, 80F);
-        PointF secondPosition = percentToAbsolute(50F, 50F);
-        PointF thirdPosition = percentToAbsolute(50F, 20F);
+        PointF firstPosition = percentToAbsolute(randomX, 80F);
+        PointF secondPosition = percentToAbsolute(randomX, 50F);
+        PointF thirdPosition = percentToAbsolute(new Random().nextInt(maxX - minX + 1) + minX, 20F);
+//        PointF firstPosition = percentToAbsolute(50F, 80F);
+//        PointF secondPosition = percentToAbsolute(0F, 50F);
+//        PointF thirdPosition = percentToAbsolute(90F, 20F);
 
 
         ArrayList<PointF> positions = new ArrayList<>(Arrays.asList(firstPosition, secondPosition, thirdPosition));
@@ -218,23 +243,33 @@ public class GameBoard extends View {
 
             PointF velocity = new PointF(new Random().nextInt(15 - 10) + 10, Basket.verticalVelocity);        // Decide this based on numberOfScreens (gameLevel)
 
-//            if (i > 1)
-            if (false)
+            if (i > 1)
+//            if (false)
                 this.baskets.add(new Basket(position, velocity, this.screenWidth, this.screenHeight));
             else
                 this.baskets.add(new Basket(position, new PointF(0, 0), this.screenWidth, this.screenHeight));
         }
     }
 
-    synchronized public Egg getEgg() {
-        return this.egg;
+    private void newScreenUpdateBaskets() {
+        if ( ! holdOnAddingBaskets) {
+            PointF position = percentToAbsolute(50F, 0 - absoluteToPercent(0, this.baskets.get(0).getHeight()).y);
+            PointF velocity = new PointF(new Random().nextInt(15 - 10) + 10, Basket.verticalVelocity);        // Decide this based on numberOfScreens (gameLevel)
+
+//            PointF position = percentToAbsolute(50F, 10F - absoluteToPercent(0, this.baskets.get(0).getHeight()).y);
+//            PointF velocity = new PointF(0F, 0F);
+
+            this.baskets.add(new Basket(position, velocity, this.screenWidth, this.screenHeight));
+        }
     }
+
+
+
+
 
     synchronized public ArrayList<Basket> getBaskets() {
         return this.baskets;
     }
-
-
 
     private void detectBasketHittingWall() {
         int maxX = this.screenWidth;
@@ -256,36 +291,7 @@ public class GameBoard extends View {
         return new PointF(100 * x / this.screenWidth, 100 * y / this.screenHeight);
     }
 
-    public Boolean eggInABasket() {
-        PointF eggPosition = this.egg.getPosition();
-        float eggX = eggPosition.x;
-        float eggY = eggPosition.y;
 
-        for (int i = 0; i < this.baskets.size(); i++) {
-            Basket b = this.baskets.get(i);
-            float basketX = b.getPosition().x;
-            float basketY = b.getPosition().y;
-
-            if (b.active() && (this.egg.getVelocity().y > 0)) {                                           // The basket must be active and the egg must be falling down.
-                if ((eggX + Egg.getWidth() / 2 > basketX) && ((eggX + Egg.getWidth() / 2) < (basketX + Basket.getWidth()))) {    // Right x position.
-                    if (Math.abs(eggY - basketY) < Egg.getWidth() / 3) {                                // Right y position.
-
-                        this.indexOfBasketHoldingEgg = i;
-
-                        this.egg.setVelocity(new PointF(this.baskets.get(indexOfBasketHoldingEgg).getVelocity().x, this.baskets.get(indexOfBasketHoldingEgg).getVelocity().y));
-
-                        if (this.whereIsEgg != indexOfBasketHoldingEgg) {
-                            // Score for the current basket hasn't been updated yet.
-                            this.score++;
-                            this.whereIsEgg = indexOfBasketHoldingEgg;
-                        }
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
 
     public void moveEggFromBasket() {
         if (this.whereIsEgg != -1) {
@@ -304,11 +310,23 @@ public class GameBoard extends View {
 
         }
     }
-    
+
     private void newScreen() {
 
-        if (this.baskets.get(0).getPosition().y > 1.05 * this.screenHeight) {
+        if (this.baskets.get(0).getPosition().y > this.screenHeight) {
             this.newScreenUpdateBaskets();
+            holdOnAddingBaskets = true;
+        }
+
+        if (this.baskets.get(0).getPosition().y > 1.05 * this.screenHeight) {
+            this.baskets.remove(0);
+
+            if (this.whereIsEgg > 0) {
+                this.whereIsEgg--;
+                this.indexOfBasketHoldingEgg--;
+            }
+            holdOnAddingBaskets= false;
+            // Because we're removing the 0th basket, we also need to update the egg's position in respect to the basket's index.
         }
     }
 

@@ -12,20 +12,23 @@ public class Egg {
     private PointF position;
     private PointF velocity; // 1500.0F
     private static int width;   // 125
+    private static int height;
 
-    public Egg(PointF position, int screenHeight) {
+    public Egg(PointF position, int screenWidth, int screenHeight) {
         this.position = position;
         this.velocity = new PointF(0.0F, 0.0F);
 
 
-        this.width = (int) (0.075 * screenHeight);
+        this.width = (int) (0.07 * screenWidth);
+        this.height = (int) (0.07 * screenHeight);
     }
 
-    public Egg(PointF position, PointF velocity, int screenHeight) {
+    public Egg(PointF position, PointF velocity, int screenWidth, int screenHeight) {
         this.position = position;
         this.velocity = velocity;
 
-        this.width = (int) (0.075 * screenHeight);
+        this.width = (int) (0.07 * screenWidth);
+        this.height = (int) (0.07 * screenHeight);
     }
 
     public PointF getPosition() {
@@ -38,11 +41,11 @@ public class Egg {
 
     public Bitmap getBitmap(Context c) {
         Bitmap natural_size_bitmap = BitmapFactory.decodeResource(c.getResources(), R.drawable.egg);
-        return Bitmap.createScaledBitmap(natural_size_bitmap, this.width, this.width, true);
+        return Bitmap.createScaledBitmap(natural_size_bitmap, this.width, this.height, true);
     }
 
     public void moveVertically() {
-        this.velocity.y = (float) (- this.width * 0.5);
+        this.velocity.y = (float) (- this.height * 0.5);
     }
 
     public void setPosition(PointF newPosition) {
@@ -95,6 +98,8 @@ public class Egg {
     public static float getWidth() {
         return width;
     }
+
+    public static float getHeight() { return height; }
 
     public void moveDownWithBasket(Basket b) {
         this.position.y = b.getPosition().y;
